@@ -9,11 +9,18 @@ import { FluxAgents } from './FluxAgents'
 import { useSuivi } from './useSuivi'
 
 const EN_COURS = new Set(['preparation', 'detection', 'traitement'])
+/** Délai sans changement d'état au-delà duquel une analyse en cours est considérée comme bloquée. */
+const DELAI_BLOCAGE_MS = 120_000
 
 export default function Analyse() {
   const { id } = useParams()
   const analyseId = Number(id)
-  const { donnees: analyse, recharger: rechargerAnalyse } = useDonnees<TAnalyse>(`/api/analyses/${analyseId}`)
+  const {
+    donnees: analyse,
+    erreur: erreurAnalyse,
+    chargement: chargementAnalyse,
+    recharger: rechargerAnalyse,
+  } = useDonnees<TAnalyse>(`/api/analyses/${analyseId}`)
   const { donnees: failles, recharger: rechargerFailles, erreur } = useDonnees<Faille[]>(
     `/api/analyses/${analyseId}/failles`,
   )
@@ -32,6 +39,21 @@ export default function Analyse() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [etat])
 
+  // Une analyse dont la tâche a été abandonnée (conteneur redémarré pendant l'analyse) reste
+  // bloquée dans son dernier état : on surveille la durée depuis le dernier changement pour
+  // proposer une relance plutôt que de laisser l'utilisateur devant un chargement sans fin.
+  const [depuisChangement, setDepuisChangement] = useState(Date.now())
+  const [maintenant, setMaintenant] = useState(Date.now())
+  useEffect(() => setDepuisChangement(Date.now()), [etat])
+  useEffect(() => {
+    const minuterie = setInterval(() => setMaintenant(Date.now()), 5_000)
+    return () => clearInterval(minuterie)
+  }, [])
+  const bloque =
+    etat === 'echec' ||
+    etat === 'en_pause' ||
+    (EN_COURS.has(etat ?? '') && maintenant - depuisChangement > DELAI_BLOCAGE_MS)
+
   const etatParFaille = useMemo(() => {
     const m: Record<number, EtatFaille> = {}
     failles?.forEach((f) => (m[f.id] = suivi.etatsFailles[f.id] ?? f.etat))
@@ -48,12 +70,16 @@ export default function Analyse() {
     rechargerAnalyse()
   }
 
-  async function reprendre() {
-    await api.post(`/api/analyses/${analyseId}/reprendre`)
+  async function relancer() {
+    await api.post(`/api/analyses/${analyseId}/relancer`)
     rechargerAnalyse()
+    rechargerFailles()
   }
 
-  if (!analyse) return <Chargement />
+  if (!analyse) {
+    if (erreurAnalyse && !chargementAnalyse) return <MessageErreur erreur={erreurAnalyse} />
+    return <Chargement />
+  }
 
   return (
     <>
@@ -68,10 +94,19 @@ export default function Analyse() {
         </div>
       </div>
       {suivi.message && <p className="message">{suivi.message}</p>}
-      {etat === 'en_pause' && (
-        <button className="bouton" onClick={reprendre}>
-          Reprendre l'analyse
-        </button>
+      {bloque && (
+        <div className="ligne espace carte">
+          <span>
+            {etat === 'echec' || etat === 'en_pause'
+              ? "L'analyse s'est arrêtée."
+              : "Cette étape dure anormalement longtemps (conteneur redémarré pendant l'analyse ?)."}{' '}
+            La relancer repart d'une liste d'alertes propre, et les failles déjà traitées ne sont pas
+            refaites.
+          </span>
+          <button className="bouton secondaire" onClick={relancer}>
+            Relancer l'analyse
+          </button>
+        </div>
       )}
 
       {compteurs && (

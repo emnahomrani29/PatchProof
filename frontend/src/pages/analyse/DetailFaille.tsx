@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api/client'
+import { MessageErreur } from '../../components/Etats'
 
 interface Correctif {
   id: number
@@ -39,11 +40,16 @@ function Condition({ ok, texte }: { ok: boolean; texte: string }) {
 
 export function DetailFaille({ failleId, onDecision }: { failleId: number; onDecision?: () => void }) {
   const [detail, setDetail] = useState<Detail | null>(null)
+  const [erreur, setErreur] = useState<unknown>(null)
 
   useEffect(() => {
-    api.get<Detail>(`/api/failles/${failleId}/detail`).then(setDetail)
+    api
+      .get<Detail>(`/api/failles/${failleId}/detail`)
+      .then(setDetail)
+      .catch(setErreur)
   }, [failleId])
 
+  if (erreur) return <MessageErreur erreur={erreur} />
   if (!detail) return <p className="message discret">Chargement…</p>
 
   const correctif = detail.correctifs.find((c) => c.valide) ?? detail.correctifs[detail.correctifs.length - 1]

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api/client'
-import { Chargement } from '../../components/Etats'
+import { Chargement, MessageErreur } from '../../components/Etats'
 import type { Role, Utilisateur } from '../../api/types'
 
 interface Parametres {
@@ -18,10 +18,17 @@ export default function Admin() {
   const [params, setParams] = useState<Parametres | null>(null)
   const [utilisateurs, setUtilisateurs] = useState<Utilisateur[]>([])
   const [message, setMessage] = useState<string | null>(null)
+  const [erreur, setErreur] = useState<unknown>(null)
 
   useEffect(() => {
-    api.get<Parametres>('/api/admin/parametres').then(setParams)
-    api.get<Utilisateur[]>('/api/admin/utilisateurs').then(setUtilisateurs)
+    api
+      .get<Parametres>('/api/admin/parametres')
+      .then(setParams)
+      .catch(setErreur)
+    api
+      .get<Utilisateur[]>('/api/admin/utilisateurs')
+      .then(setUtilisateurs)
+      .catch(setErreur)
   }, [])
 
   async function enregistrer() {
@@ -36,6 +43,7 @@ export default function Admin() {
     setUtilisateurs((liste) => liste.map((x) => (x.id === maj.id ? maj : x)))
   }
 
+  if (erreur) return <MessageErreur erreur={erreur} />
   if (!params) return <Chargement />
 
   const champ = (cle: keyof Parametres, libelle: string, type = 'number') => (
