@@ -4,10 +4,40 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from patchproof.core.db import Base
+
+
+def colonne_enum(classe: type[StrEnum], longueur: int) -> Enum:
+    """Colonne d'énumération stockée en texte et **relue en objet Python**.
+
+    Sans cela, une valeur relue depuis la base est une simple chaîne de caractères : tout code qui
+    lit `etat.value` ou `famille.value` sur une ligne chargée échoue (suivi en direct, rapport,
+    patch). L'erreur n'apparaît pas dans le worker, qui vient d'affecter le membre en mémoire.
+
+    `values_callable` enregistre la valeur du membre (« en_attente ») et non son nom, ce qui
+    correspond au contenu déjà en base ; `native_enum=False` conserve une colonne VARCHAR, donc
+    aucun changement de schéma n'est nécessaire.
+    """
+    return Enum(
+        classe,
+        native_enum=False,
+        values_callable=lambda enumeration: [membre.value for membre in enumeration],
+        length=longueur,
+        validate_strings=True,
+    )
 
 
 def maintenant() -> datetime:
@@ -57,7 +87,7 @@ class Utilisateur(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     nom: Mapped[str] = mapped_column(String(120))
     mot_de_passe_hash: Mapped[str] = mapped_column(String(100))
-    role: Mapped[Role] = mapped_column(String(30), default=Role.developpeur)
+    role: Mapped[Role] = mapped_column(colonne_enum(Role, 30), default=Role.developpeur)
     actif: Mapped[bool] = mapped_column(Boolean, default=True)
     github_jeton_chiffre: Mapped[str | None] = mapped_column(Text, nullable=True)
     github_login: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -92,7 +122,8 @@ class Analyse(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     projet_id: Mapped[int] = mapped_column(ForeignKey("projets.id", ondelete="CASCADE"), index=True)
-    etat: Mapped[EtatAnalyse] = mapped_column(String(20), default=EtatAnalyse.en_attente)
+    etat: Mapped[EtatAnalyse] = mapped_column(colonne_enum(EtatAnalyse, 20),
+                                              default=EtatAnalyse.en_attente)
     jetons_utilises: Mapped[int] = mapped_column(Integer, default=0)
     cout_estime_usd: Mapped[float] = mapped_column(Float, default=0.0)
     message_erreur: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -116,13 +147,14 @@ class Faille(Base):
     fichier: Mapped[str] = mapped_column(String(400))
     ligne: Mapped[int] = mapped_column(Integer)
     cwe: Mapped[str] = mapped_column(String(20))
-    famille: Mapped[Famille] = mapped_column(String(20))
+    famille: Mapped[Famille] = mapped_column(colonne_enum(Famille, 20))
     gravite: Mapped[str] = mapped_column(String(10))
     exposee: Mapped[bool] = mapped_column(Boolean, default=False)
     priorite: Mapped[int] = mapped_column(Integer, default=0)
     extrait: Mapped[str] = mapped_column(Text, default="")
     exclue: Mapped[bool] = mapped_column(Boolean, default=False)
-    etat: Mapped[EtatFaille] = mapped_column(String(20), default=EtatFaille.en_attente)
+    etat: Mapped[EtatFaille] = mapped_column(colonne_enum(EtatFaille, 20),
+                                             default=EtatFaille.en_attente)
     point_entree: Mapped[str | None] = mapped_column(String(300), nullable=True)
     justification: Mapped[str | None] = mapped_column(Text, nullable=True)
     tentatives_attaque: Mapped[int] = mapped_column(Integer, default=0)
