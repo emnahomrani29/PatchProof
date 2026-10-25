@@ -82,3 +82,23 @@ def test_masquage_a_l_envoi_et_demasquage_a_la_reception():
 def test_arguments_illisibles_signales():
     reponse = client([message_llm(None, [("lire_fichier", "{pas du json")])]).discuter(MESSAGES, modele="m")
     assert reponse.appels_outils[0].erreur.startswith("Arguments JSON invalides")
+
+
+def test_le_raisonnement_est_lu_separement_du_contenu():
+    """Un modèle à raisonnement renvoie sa réflexion à part et laisse content à None."""
+    reponse = client([message_llm(None, raisonnement="Je regarde d'abord la route.")]).discuter(MESSAGES,
+                                                                                               modele="m")
+    assert reponse.contenu is None
+    assert reponse.raisonnement == "Je regarde d'abord la route."
+
+
+def test_le_raisonnement_est_demasque_a_la_reception():
+    masqueur = Masqueur()
+    assert "<SECRET_1>" in masqueur.masquer('DB_PASSWORD = "tres-secret-42"')
+    scenario = [message_llm(None, raisonnement="la valeur envoyée est <SECRET_1>")]
+    llm = ClientLLM(masqueur=masqueur, client=FauxOpenAI(scenario), attendre=lambda _s: None)
+    assert llm.discuter(MESSAGES, modele="m").raisonnement == "la valeur envoyée est tres-secret-42"
+
+
+def test_raisonnement_absent():
+    assert client([message_llm("ok")]).discuter(MESSAGES, modele="m").raisonnement is None

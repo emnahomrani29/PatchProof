@@ -51,6 +51,7 @@ class AppelOutil:
 @dataclass
 class ReponseLLM:
     contenu: str | None
+    raisonnement: str | None = None  # réflexion du modèle, séparée de la réponse finale
     appels_outils: list[AppelOutil] = field(default_factory=list)
     jetons_entree: int = 0
     jetons_sortie: int = 0
@@ -140,11 +141,33 @@ class ClientLLM:
 
     # -- réception ---------------------------------------------------------------
 
+    def texte_raisonnement(self, message: Any) -> str | None:
+        """Réflexion d'un modèle « raisonneur », ou None.
+
+        Ces modèles renvoient leur réflexion dans un champ distinct (`reasoning`, ou
+        `reasoning_details[].text` chez OpenRouter) et laissent `content` à `null` tant qu'ils n'ont
+        pas produit de réponse finale. Sans cette lecture, un tour qui ne contient que du
+        raisonnement passe pour une réponse vide et son texte est perdu.
+        """
+        morceaux: list[str] = []
+        direct = getattr(message, "reasoning", None)
+        if direct:
+            morceaux.append(direct)
+        for bloc in getattr(message, "reasoning_details", None) or []:
+            texte = bloc.get("text") if isinstance(bloc, dict) else getattr(bloc, "text", None)
+            if texte and texte not in morceaux:
+                morceaux.append(texte)
+        texte = "\n".join(m.strip() for m in morceaux if m).strip()
+        if not texte:
+            return None
+        return self.masqueur.demasquer(texte) or None
+
     def _lire(self, reponse: Any) -> ReponseLLM:
         if not getattr(reponse, "choices", None):
             raise LLMIndisponible("Réponse vide du LLM.")
         message = reponse.choices[0].message
         contenu = self.masqueur.demasquer(message.content) if message.content else None
+        raisonnement = self.texte_raisonnement(message)
 
         appels: list[AppelOutil] = []
         appels_bruts: list[dict[str, Any]] = []
@@ -170,6 +193,7 @@ class ClientLLM:
         usage = getattr(reponse, "usage", None)
         return ReponseLLM(
             contenu=contenu,
+            raisonnement=raisonnement,
             appels_outils=appels,
             jetons_entree=getattr(usage, "prompt_tokens", 0) or 0,
             jetons_sortie=getattr(usage, "completion_tokens", 0) or 0,

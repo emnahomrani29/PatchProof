@@ -26,8 +26,12 @@ class FauxBac:
 
 
 def message_llm(contenu: str | None = None, appels: list[tuple[str, dict | str]] | None = None,
-                jetons: tuple[int, int] = (100, 20)) -> SimpleNamespace:
-    """Construit une réponse au format du SDK openai."""
+                jetons: tuple[int, int] = (100, 20), raisonnement: str | None = None) -> SimpleNamespace:
+    """Construit une réponse au format du SDK openai.
+
+    `raisonnement` reproduit le champ `reasoning` des modèles à raisonnement, qui renvoient leur
+    réflexion à part et laissent `content` à None tant qu'ils n'ont pas produit de réponse finale.
+    """
     tool_calls = None
     if appels:
         tool_calls = [
@@ -38,7 +42,8 @@ def message_llm(contenu: str | None = None, appels: list[tuple[str, dict | str]]
             for i, (nom, args) in enumerate(appels)
         ]
     return SimpleNamespace(
-        choices=[SimpleNamespace(message=SimpleNamespace(content=contenu, tool_calls=tool_calls))],
+        choices=[SimpleNamespace(message=SimpleNamespace(content=contenu, tool_calls=tool_calls,
+                                                         reasoning=raisonnement))],
         usage=SimpleNamespace(prompt_tokens=jetons[0], completion_tokens=jetons[1], cost=0.001),
     )
 

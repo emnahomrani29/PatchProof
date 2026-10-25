@@ -104,3 +104,29 @@ def test_consommation_comptee(tmp_path):
                       consommer=lambda e, s, c: total.append((e, s, c)))
     lancer(ctx)
     assert total == [(1000, 50, 0.001)]
+
+
+def test_un_tour_de_raisonnement_seul_est_affiche(tmp_path):
+    """Le modèle peut renvoyer sa réflexion sans contenu : elle doit apparaître dans le suivi."""
+    ctx, etapes = contexte(tmp_path, [
+        message_llm(None, raisonnement="Hypothèse : le paramètre arrive dans la requête."),
+        message_llm('{"verdict": "oui"}'),
+    ])
+    assert lancer(ctx).verdict == "oui"
+    assert etapes[0].nature == "raisonnement"
+    assert "Hypothèse" in etapes[0].resume
+
+
+def test_reponse_finale_vide_redemandee_sans_tour_vide(tmp_path):
+    """Un tour vide n'est pas réinjecté dans l'historique, et l'agent redemande une réponse."""
+    ctx, etapes = contexte(tmp_path, [message_llm(None), message_llm('{"verdict": "oui"}')])
+    assert lancer(ctx).verdict == "oui"
+    assert [e.nature for e in etapes] == ["erreur", "raisonnement"]
+    envoyes = ctx.client._client.requetes[1]["messages"]
+    assert not [m for m in envoyes if m.get("role") == "assistant" and not m.get("content")]
+
+
+def test_trois_reponses_vides_arretent_l_agent(tmp_path):
+    ctx, _ = contexte(tmp_path, [message_llm(None)] * 3)
+    with pytest.raises(SortieInvalide):
+        lancer(ctx)

@@ -93,16 +93,37 @@ def executer_agent[T: BaseModel](
 
         reponse = contexte.client.discuter(messages, modele=modele, outils=definitions)
         contexte.consommer(reponse.jetons_entree, reponse.jetons_sortie, reponse.cout_usd)
-        messages.append(reponse.message_brut)
 
-        if reponse.contenu and reponse.contenu.strip():
-            contexte.etape(agent, "raisonnement", tronquer(reponse.contenu.strip(), TAILLE_RESUME),
+        # Un tour sans texte ni appel d'outil n'est pas réinjecté dans l'historique : un message
+        # assistant vide fait dérailler les appels suivants chez plusieurs fournisseurs.
+        if reponse.appels_outils or (reponse.contenu or "").strip():
+            messages.append(reponse.message_brut)
+
+        # Les modèles à raisonnement expliquent leur démarche dans un champ séparé du contenu :
+        # on l'affiche dans le suivi, et il sert de texte quand la réponse est uniquement une réflexion.
+        texte_visible = (reponse.contenu or "").strip() or (reponse.raisonnement or "").strip()
+        if texte_visible:
+            contexte.etape(agent, "raisonnement", tronquer(texte_visible, TAILLE_RESUME),
                            jetons_entree=reponse.jetons_entree, jetons_sortie=reponse.jetons_sortie)
 
         if reponse.appels_outils:
             for appel in reponse.appels_outils:
                 messages.append({"role": "tool", "tool_call_id": appel.id,
                                  "content": _executer_outil(agent, appel, outils, contexte)})
+            continue
+
+        # Réponse finale vide : on redemande explicitement, sans réinjecter le tour vide.
+        if not (reponse.contenu or "").strip():
+            corrections += 1
+            contexte.etape(agent, "erreur", f"Réponse finale vide ({corrections}/{MAX_CORRECTIONS_JSON})",
+                           resultat="Le modèle n'a renvoyé ni texte ni appel d'outil.", succes=False)
+            if corrections > MAX_CORRECTIONS_JSON:
+                raise SortieInvalide("L'agent n'a produit aucune réponse exploitable.")
+            messages.append({
+                "role": "user",
+                "content": "Ta réponse précédente ne contenait aucun texte. Réponds maintenant par un "
+                           "message contenant uniquement l'objet JSON demandé, sans appel d'outil.",
+            })
             continue
 
         try:
