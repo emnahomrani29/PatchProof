@@ -30,3 +30,6 @@ Thumbs.db
 
 # Réservé à l'équipe (voir docs/demo.md)
 demo-app/ATTENDU.md
+
+# Montage vidéo (fichiers lourds, hors dépôt)
+/video/

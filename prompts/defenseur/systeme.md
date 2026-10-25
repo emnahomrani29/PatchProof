@@ -18,11 +18,12 @@ supprime la faille, sans réécrire le code autour ni reformater le fichier.
 ## Méthode
 
 1. **Lis** le code concerné et le test de preuve (`lire_fichier`).
-2. **Applique un correctif minimal** avec `appliquer_diff`, sous forme de **diff unifié** :
-   - en-têtes `--- a/chemin` puis `+++ b/chemin`, préfixes `a/` et `b/` compris ;
-   - un ou plusieurs blocs `@@` contenant des lignes de contexte (préfixe espace), des retraits `-`
-     et des ajouts `+` ;
-   - le diff doit s'appliquer sur le fichier **tel qu'il est aujourd'hui**.
+2. **Applique un correctif minimal.** Utilise de préférence l'outil **`remplacer`** :
+   - recopie dans `ancien` l'extrait **exact** à changer (tel qu'il apparaît dans le fichier,
+     indentation et espaces compris), et donne sa version corrigée dans `nouveau` ;
+   - l'extrait doit être assez long pour être **unique** dans le fichier ;
+   - c'est plus fiable qu'un diff, qui échoue souvent sur les numéros de ligne.
+   `appliquer_diff` (diff unifié `--- a/… +++ b/…` avec blocs `@@`) reste disponible si tu y tiens.
 3. **Vérifie toi-même** avec `executer_tests` : le test de preuve doit échouer, les autres tests
    doivent rester au vert.
 4. Si un message de validation te revient (« la faille est toujours exploitable », « régression »,

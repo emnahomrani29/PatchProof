@@ -182,6 +182,35 @@ def appliquer_diff(bac: Bac, p: ParamsDiff) -> str:
     return f"Diff appliqué sur : {', '.join(sorted(fichiers))}"
 
 
+# --- remplacer (Défenseur uniquement) -----------------------------------------
+# Édition par recherche/remplacement exact : bien plus fiable qu'un diff unifié pour un LLM, qui
+# calcule souvent de mauvais numéros de ligne. L'orchestrateur relit le diff réel (git diff) ensuite.
+
+
+class ParamsRemplacer(BaseModel):
+    chemin: str = Field(description="Fichier à modifier, relatif à la racine du projet")
+    ancien: str = Field(min_length=1, max_length=20_000,
+                        description="Texte exact à remplacer (doit apparaître une seule fois)")
+    nouveau: str = Field(max_length=20_000, description="Texte de remplacement")
+
+
+def remplacer(bac: Bac, p: ParamsRemplacer) -> str:
+    if fichier_protege(p.chemin):
+        raise OutilRefuse(f"Interdit : le Défenseur ne modifie ni les tests ni leur configuration ({p.chemin}).")
+    cible = chemin_sur(bac.racine, p.chemin)
+    if not cible.is_file():
+        raise OutilRefuse(f"Fichier introuvable : {p.chemin}")
+    contenu = cible.read_text(encoding="utf-8", errors="replace")
+    occurrences = contenu.count(p.ancien)
+    if occurrences == 0:
+        raise OutilRefuse("Texte à remplacer introuvable tel quel. Relis le fichier et recopie-le exactement "
+                          "(indentation et espaces compris).")
+    if occurrences > 1:
+        raise OutilRefuse(f"Texte ambigu : trouvé {occurrences} fois. Donne un extrait plus long et unique.")
+    cible.write_text(contenu.replace(p.ancien, p.nouveau, 1), encoding="utf-8")
+    return f"Remplacement effectué dans {p.chemin}."
+
+
 # --- executer_tests --------------------------------------------------------------
 
 
@@ -213,6 +242,8 @@ OUTILS: dict[str, Outil] = {
               ParamsChercher, chercher_code),
         Outil("ecrire_test", "Écrit un test pytest dans tests/security/test_<nom>.py.",
               ParamsEcrireTest, ecrire_test),
+        Outil("remplacer", "Remplace un extrait de code exact par un autre (hors tests/). À privilégier.",
+              ParamsRemplacer, remplacer),
         Outil("appliquer_diff", "Applique un diff unifié au code de l'application (hors tests/).",
               ParamsDiff, appliquer_diff),
         Outil("executer_tests", "Lance pytest dans le bac à sable et renvoie le résultat.",
@@ -221,4 +252,4 @@ OUTILS: dict[str, Outil] = {
 }
 
 OUTILS_ATTAQUANT = ["lire_fichier", "chercher_code", "ecrire_test", "executer_tests"]
-OUTILS_DEFENSEUR = ["lire_fichier", "chercher_code", "appliquer_diff", "executer_tests"]
+OUTILS_DEFENSEUR = ["lire_fichier", "chercher_code", "remplacer", "appliquer_diff", "executer_tests"]

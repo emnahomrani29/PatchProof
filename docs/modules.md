@@ -7,13 +7,13 @@ Le **socle** (structure, configuration, base de données, client LLM, boucle d'a
 
 | Module | Responsable | Exigences | Dossiers |
 |---|---|---|---|
-| Socle | *(premier lot)* | Transverses | `backend/patchproof/{core,llm,api}/`, `backend/patchproof/agents/{boucle,outils}.py`, `backend/patchproof/worker.py`, `docker-compose.yml`, `frontend/src/` hors `pages/` |
-| M1 – Comptes et projets | *à compléter* | E-1.1, E-1.2, administration | `backend/patchproof/comptes/`, `frontend/src/pages/comptes/`, `frontend/src/pages/projets/` |
-| M2 – Détection | *à compléter* | E-2.1, E-2.2 | `backend/patchproof/detection/`, `sandbox/regles/`, `frontend/src/pages/alertes/` |
-| M3 – Agent Attaquant | *à compléter* | E-3.1, E-3.2 | `backend/patchproof/agents/attaquant/`, `prompts/attaquant/`, `prompts/exemples/*/attaque.md` |
-| M4 – Agent Défenseur | *à compléter* | E-4.1, E-4.2 | `backend/patchproof/agents/defenseur/`, `prompts/defenseur/`, `prompts/exemples/*/correctif.md` |
-| M5 – Validation et orchestration | *à compléter* | E-5.1, E-5.2, E-5.3 | `backend/patchproof/{sandbox,validation,orchestration}/`, `sandbox/Dockerfile` |
-| M6 – Suivi, rapport et livraison | *à compléter* | E-6.1, E-6.2, E-6.3, revue humaine | `backend/patchproof/{suivi,rapport,livraison}/`, `frontend/src/pages/{analyse,rapport,revue}/` |
+| Socle | **Iheb Jlassi** *(premier push)* | Transverses | `backend/patchproof/{core,llm,api}/`, `backend/patchproof/agents/{boucle,outils}.py`, `backend/patchproof/worker.py`, `docker-compose.yml`, `frontend/src/` hors `pages/` |
+| M1 – Comptes et projets | Salma Louhichi | E-1.1, E-1.2, administration | `backend/patchproof/comptes/`, `frontend/src/pages/comptes/`, `frontend/src/pages/projets/` |
+| M2 – Détection | Abdel Kader Kaddachi | E-2.1, E-2.2 | `backend/patchproof/detection/`, `sandbox/regles/`, `frontend/src/pages/alertes/` |
+| M3 – Agent Attaquant | Iheb Jlassi | E-3.1, E-3.2 | `backend/patchproof/agents/attaquant/`, `prompts/attaquant/`, `prompts/exemples/*/attaque.md` |
+| M4 – Agent Défenseur | Emna Homrani | E-4.1, E-4.2 | `backend/patchproof/agents/defenseur/`, `prompts/defenseur/`, `prompts/exemples/*/correctif.md` |
+| M5 – Validation et orchestration | Dhia Dine Bahi | E-5.1, E-5.2, E-5.3 | `backend/patchproof/{sandbox,validation,orchestration}/`, `sandbox/Dockerfile` |
+| M6 – Suivi, rapport et livraison | Yosser Khaldi | E-6.1, E-6.2, E-6.3, revue humaine | `backend/patchproof/{suivi,rapport,livraison}/`, `frontend/src/pages/{analyse,rapport,revue}/` |
 
 L'application de démonstration (`demo-app/`) est un travail commun, à finir en semaine 2 (voir [demo.md](demo.md)).
 
