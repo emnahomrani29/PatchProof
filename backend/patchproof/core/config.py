@@ -5,9 +5,18 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Racine du dépôt (backend/patchproof/core/config.py -> backend/patchproof -> backend -> racine).
+RACINE_DEPOT = Path(__file__).resolve().parents[3]
+
 
 class Parametres(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # Le fichier .env vit à la racine du dépôt : il est référencé en absolu pour que la
+    # configuration soit la même quel que soit le dossier depuis lequel le code est lancé
+    # (pytest depuis backend/, script utilitaire, worker). Les variables d'environnement,
+    # elles, restent prioritaires — c'est ce que docker compose fournit.
+    model_config = SettingsConfigDict(
+        env_file=(RACINE_DEPOT / ".env", ".env"), extra="ignore",
+    )
 
     # LLM
     openrouter_api_key: str = ""
@@ -44,7 +53,7 @@ class Parametres(BaseSettings):
     url_frontend: str = "http://localhost:5173"
     url_api: str = "http://localhost:8000"
     dossier_donnees: Path = Path("data")
-    dossier_prompts: Path = Path(__file__).resolve().parents[3] / "prompts"
+    dossier_prompts: Path = RACINE_DEPOT / "prompts"
 
     @property
     def dossier_projets(self) -> Path:
