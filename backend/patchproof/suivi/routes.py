@@ -37,7 +37,9 @@ async def suivi_direct(websocket: WebSocket, analyse_id: int, jeton: str = "") -
             analyse = analyse_accessible(s, analyse_id, utilisateur)
             etat_initial = {"type": "etat_analyse", "etat": analyse.etat.value,
                             "message": analyse.message_erreur, "compteurs": compteurs(analyse)}
-    except Exception:  # noqa: BLE001  jeton invalide ou analyse inaccessible
+    except Exception:  # noqa: BLE001  jeton invalide ou analyse inaccessible : on refuse la connexion
+        # Sans cette trace, un refus avant `accept()` n'apparaît que comme un 403 sans explication.
+        journal.warning("Suivi refusé pour l'analyse %s", analyse_id, exc_info=True)
         await websocket.close(code=4401)
         return
 
