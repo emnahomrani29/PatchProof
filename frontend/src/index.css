@@ -381,3 +381,179 @@ table.tableau {
     overflow-x: auto;
   }
 }
+
+/* ===================== Vue temps réel de l'analyse ===================== */
+
+/* Fil des étapes (stepper horizontal) */
+.pipeline {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  padding: 4px 0;
+}
+.etape-pipe {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 96px;
+  position: relative;
+  flex: 1;
+}
+.etape-pipe .pastille {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 800;
+  background: var(--surface-2);
+  color: var(--texte-2);
+  border: 2px solid var(--bordure);
+  z-index: 1;
+  transition: all 0.3s;
+}
+.etape-pipe .libelle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texte-2);
+  text-align: center;
+  line-height: 1.2;
+}
+.etape-pipe:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 17px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--bordure);
+  z-index: 0;
+}
+.etape-pipe.faite .pastille {
+  background: var(--succes-fond);
+  color: var(--succes);
+  border-color: var(--succes);
+}
+.etape-pipe.faite:not(:last-child)::after {
+  background: var(--succes);
+}
+.etape-pipe.active .pastille {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  animation: pulse 1.4s infinite;
+}
+.etape-pipe.active .libelle {
+  color: var(--accent);
+  font-weight: 800;
+}
+.etape-pipe.echec .pastille {
+  background: var(--danger-fond);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); }
+  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 0%, transparent); }
+}
+
+/* Console des agents */
+.console {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.evt {
+  border-left: 3px solid var(--bordure);
+  background: var(--surface-2);
+  border-radius: 0 10px 10px 0;
+  padding: 8px 12px;
+  animation: apparition 0.3s ease;
+}
+@keyframes apparition {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: none; }
+}
+.evt.attaquant { border-left-color: var(--danger); }
+.evt.defenseur { border-left-color: var(--accent); }
+.evt.orchestrateur { border-left-color: var(--texte-2); }
+.evt-tete {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.evt-agent { font-weight: 800; text-transform: capitalize; }
+.evt.attaquant .evt-agent { color: var(--danger); }
+.evt.defenseur .evt-agent { color: var(--accent); }
+.evt.orchestrateur .evt-agent { color: var(--texte-2); }
+.evt-heure { margin-left: auto; font-size: 11px; color: var(--texte-2); font-variant-numeric: tabular-nums; }
+.evt-resume { font-size: 14px; margin-top: 3px; line-height: 1.4; }
+.evt-detail {
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  background: var(--code-bg, #2b1018);
+  color: var(--code-fg, #f8eadc);
+  border-radius: 6px;
+  padding: 7px 10px;
+  white-space: pre-wrap;
+  max-height: 180px;
+  overflow: auto;
+}
+.evt-outil {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--neutre-fond);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* Mini-pipeline d'une faille */
+.faille-carte {
+  border: 1px solid var(--bordure);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--surface);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.faille-carte.en_cours {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.faille-chemin {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.jalon {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--neutre-fond);
+  color: var(--texte-2);
+}
+.jalon.ok { background: var(--succes-fond); color: var(--succes); }
+.jalon.ko { background: var(--danger-fond); color: var(--danger); }
+.jalon.warn { background: var(--alerte-fond); color: var(--alerte); }
+.jalon.cur { background: var(--accent); color: #fff; animation: pulse 1.4s infinite; }
+.jalon-fleche { color: var(--texte-2); font-size: 12px; }
+
+.ping {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--succes);
+  animation: pulse 1.4s infinite;
+}

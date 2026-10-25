@@ -5,9 +5,12 @@ avec en_pause (quota/budget) et echec (installation ou tests existants KO). Repr
 """
 
 import logging
+import shutil
 from pathlib import Path
 
+from patchproof.core.config import parametres
 from patchproof.core.db import session
+from patchproof.core.git import initialiser_depot
 from patchproof.core.modeles import Analyse, EtatAnalyse, Faille, Famille, Projet, maintenant
 from patchproof.core.schemas import Etape
 from patchproof.detection.priorisation import fusionner, prioriser
@@ -123,11 +126,14 @@ def traiter_analyse(analyse_id: int) -> None:
     with session() as s:
         analyse = s.get(Analyse, analyse_id)
         projet = s.get(Projet, analyse.projet_id)
-        racine = Path(projet.chemin_stockage)
+        source = Path(projet.chemin_stockage)
         commande_test = projet.commande_test
         _etat(s, analyse, EtatAnalyse.traitement)
         _information(analyse_id, "Traitement des alertes par les agents (bac à sable reconstruit).")
 
+    # Les agents écrivent dans la copie de travail (tests de preuve, diffs). On travaille sur une
+    # copie dédiée à l'analyse pour que le projet importé reste intact et réanalysable à l'identique.
+    racine = _copie_de_travail(analyse_id, source)
     try:
         with BacASable.creer(analyse_id, racine) as bac:
             install = bac.installer()
@@ -143,11 +149,22 @@ def traiter_analyse(analyse_id: int) -> None:
         return
     except ErreurBac as e:
         return _echec(analyse_id, str(e))
+    finally:
+        shutil.rmtree(racine, ignore_errors=True)
 
     with session() as s:
         analyse = s.get(Analyse, analyse_id)
         analyse.termine_le = maintenant()
         _etat(s, analyse, EtatAnalyse.terminee)
+
+
+def _copie_de_travail(analyse_id: int, source: Path) -> Path:
+    """Copie le projet dans un dossier propre à l'analyse (le projet importé reste intact)."""
+    cible = parametres().dossier_donnees / "travail" / str(analyse_id)
+    shutil.rmtree(cible, ignore_errors=True)
+    shutil.copytree(source, cible, ignore=shutil.ignore_patterns(".git", "__pycache__", ".venv", "node_modules"))
+    initialiser_depot(cible)  # l'orchestrateur versionne les correctifs sur cette copie
+    return cible
 
 
 def _echec(analyse_id: int, message: str) -> None:

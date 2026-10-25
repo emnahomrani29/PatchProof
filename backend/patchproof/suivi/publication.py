@@ -43,9 +43,13 @@ def publier_etape(etape: Etape) -> None:
         s.add(ligne)
         s.flush()
         identifiant = ligne.id
+        horodatage = ligne.cree_le.isoformat()
+    # `resultat` (tronqué) permet au suivi en direct d'afficher le détail d'un outil ou d'un
+    # raisonnement sans un aller-retour supplémentaire vers l'API.
     _publier_redis(etape.analyse_id, {
         "type": "etape", "id": identifiant, "faille_id": etape.faille_id, "agent": etape.agent,
         "nature": etape.nature, "resume": etape.resume, "outil": etape.outil, "succes": etape.succes,
+        "resultat": (etape.resultat or "")[:1500] or None, "cree_le": horodatage,
     })
 
 

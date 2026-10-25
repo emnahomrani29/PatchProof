@@ -1,7 +1,9 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import type { ReactNode } from 'react'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { aLeRole, useSession } from './auth'
 import { Chargement } from './components/Etats'
 import { Gabarit } from './components/Gabarit'
+import { LimiteErreur } from './components/LimiteErreur'
 import { ROUTES, type RouteModule } from './modules'
 
 const CHEMIN_CONNEXION = '/connexion'
@@ -17,7 +19,15 @@ function Garde({ route }: { route: RouteModule }) {
   if (route.role && !aLeRole(utilisateur, route.role)) {
     return <p className="message erreur">Cette page est réservée au rôle « {route.role} ».</p>
   }
-  return <>{route.element}</>
+  return <ContenuProtege route={route}>{route.element}</ContenuProtege>
+}
+
+// Une erreur de rendu d'une page est isolée (clé = chemin) : elle n'emporte ni le menu ni le reste.
+function ContenuProtege({ route, children }: { route: RouteModule; children: ReactNode }) {
+  const emplacement = useLocation()
+  return (
+    <LimiteErreur key={`${route.chemin}:${emplacement.pathname}`}>{children}</LimiteErreur>
+  )
 }
 
 function Accueil() {

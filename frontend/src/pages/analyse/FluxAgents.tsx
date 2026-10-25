@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Etape as EtapeAgent } from '../../api/types'
 
 const ICONE: Record<string, string> = {
@@ -6,45 +6,66 @@ const ICONE: Record<string, string> = {
   appel_outil: '🔧',
   resultat_outil: '↩',
   verdict: '⚖',
-  validation: '✓',
+  validation: '✅',
   erreur: '⚠',
-  information: 'ⓘ',
+  information: 'ℹ️',
 }
 
-const COULEUR_AGENT: Record<string, string> = {
-  attaquant: 'var(--danger)',
-  defenseur: 'var(--accent)',
-  orchestrateur: 'var(--texte-2)',
+const LIBELLE_NATURE: Record<string, string> = {
+  raisonnement: 'réflexion',
+  appel_outil: 'outil',
+  resultat_outil: 'résultat',
+  verdict: 'verdict',
+  validation: 'validation',
+  erreur: 'erreur',
+  information: 'info',
 }
 
-/** Journal défilant des étapes des agents, mis à jour en direct. */
-export function FluxAgents({ etapes }: { etapes: EtapeAgent[] }) {
+function heure(iso?: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('fr-FR')
+}
+
+/** Console défilante des étapes des agents, enrichie (détails dépliables, horodatage). */
+export function FluxAgents({ etapes, filtre }: { etapes: EtapeAgent[]; filtre?: number | null }) {
   const finRef = useRef<HTMLDivElement>(null)
-  useEffect(() => finRef.current?.scrollIntoView({ behavior: 'smooth' }), [etapes.length])
+  const [auto, setAuto] = useState(true)
+  const liste = filtre == null ? etapes : etapes.filter((e) => e.faille_id === filtre)
 
-  if (!etapes.length) {
+  useEffect(() => {
+    if (auto) finRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [liste.length, auto])
+
+  if (!liste.length) {
     return <p className="message discret">En attente des premières étapes des agents…</p>
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 460, overflowY: 'auto' }}>
-      {etapes.map((e, i) => (
-        <div
-          key={e.id ?? i}
-          className="carte"
-          style={{ padding: '8px 12px', margin: 0, borderLeft: `3px solid ${COULEUR_AGENT[e.agent]}` }}
-        >
-          <div className="ligne" style={{ gap: 8 }}>
-            <span>{ICONE[e.nature] ?? '·'}</span>
-            <strong style={{ color: COULEUR_AGENT[e.agent], textTransform: 'capitalize', fontSize: '.85rem' }}>
-              {e.agent}
-            </strong>
-            {e.outil && <code style={{ fontSize: '.8rem' }}>{e.outil}</code>}
-            {!e.succes && <span className="badge etat-revue_humaine">échec</span>}
+    <div
+      className="console"
+      onScroll={(e) => {
+        const el = e.currentTarget
+        setAuto(el.scrollHeight - el.scrollTop - el.clientHeight < 60)
+      }}
+    >
+      {liste.map((e, i) => {
+        const detail = e.nature === 'resultat_outil' || e.nature === 'raisonnement' ? e.resultat : null
+        return (
+          <div key={e.id ?? i} className={`evt ${e.agent}`}>
+            <div className="evt-tete">
+              <span>{ICONE[e.nature] ?? '·'}</span>
+              <span className="evt-agent">{e.agent}</span>
+              <span className="legende">· {LIBELLE_NATURE[e.nature] ?? e.nature}</span>
+              {e.outil && <span className="evt-outil">{e.outil}</span>}
+              {!e.succes && <span className="jalon ko">échec</span>}
+              <span className="evt-heure">{heure(e.cree_le)}</span>
+            </div>
+            <div className="evt-resume">{e.resume}</div>
+            {detail && detail !== e.resume && <pre className="evt-detail">{detail}</pre>}
           </div>
-          <div style={{ fontSize: '.9rem', marginTop: 2 }}>{e.resume}</div>
-        </div>
-      ))}
+        )
+      })}
       <div ref={finRef} />
     </div>
   )

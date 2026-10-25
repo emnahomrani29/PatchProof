@@ -4,7 +4,7 @@ Point de situation du socle livré et des travaux restants, pour organiser la su
 
 ## Ce qui est construit et vérifié
 
-Backend complet (**66 tests** au vert, `ruff` sans erreur) et frontend qui compile.
+Backend complet (**84 tests** au vert, `ruff` sans erreur) et frontend qui compile.
 
 Vérifié sur le vrai stack et avec le vrai modèle :
 
@@ -84,7 +84,7 @@ docker compose up
 ## Tests et qualité
 
 ```bash
-cd backend && pip install -e ".[dev]" && pytest          # 49 tests
+cd backend && pip install -e ".[dev]" && pytest          # 84 tests
 cd backend && ruff check patchproof                      # style
 cd frontend && npm install && npm run lint && npm run build
 ```

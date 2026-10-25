@@ -16,7 +16,13 @@ class Base(DeclarativeBase):
 
 @lru_cache
 def moteur() -> Engine:
-    return create_engine(parametres().database_url, pool_pre_ping=True)
+    url = parametres().database_url
+    # psycopg3 prépare côté serveur les requêtes répétées. Quand une connexion du pool est
+    # réutilisée (fréquent dans le worker qui enregistre beaucoup d'étapes), le même nom de requête
+    # préparée entre en conflit (« prepared statement _pg3_0 already exists »). On désactive la
+    # préparation automatique pour les bases psycopg.
+    connect_args = {"prepare_threshold": None} if url.startswith("postgresql+psycopg") else {}
+    return create_engine(url, pool_pre_ping=True, connect_args=connect_args)
 
 
 @lru_cache

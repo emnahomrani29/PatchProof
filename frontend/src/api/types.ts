@@ -103,6 +103,7 @@ export interface Etape {
   nature: NatureEtape
   resume: string
   outil: string | null
+  resultat?: string | null
   succes: boolean
   cree_le?: string
 }

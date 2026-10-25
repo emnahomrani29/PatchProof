@@ -260,5 +260,6 @@ class EtapeSortie(BaseModel):
     nature: str
     resume: str
     outil: str | None
+    resultat: str | None
     succes: bool
     cree_le: datetime
