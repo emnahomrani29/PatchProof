@@ -24,6 +24,8 @@ flowchart TD
 
 - Les définitions d'outils sont envoyées au format *function calling* compatible OpenAI (OpenRouter).
 - La réponse finale est demandée en JSON et validée par un modèle Pydantic. Aucune sortie n'est utilisée sans validation.
+- Les modèles utilisés raisonnent : leur réflexion arrive dans un champ distinct du contenu. Elle est
+  lue, démasquée et publiée comme étape `raisonnement`, ce qui alimente le suivi en direct (voir D-13).
 - Chaque appel LLM et chaque appel d'outil devient une ligne `etapes_agent` (traçabilité à 100 %).
 
 ## 2. Outils

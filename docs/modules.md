@@ -17,6 +17,13 @@ Le **socle** (structure, configuration, base de données, client LLM, boucle d'a
 
 L'application de démonstration (`demo-app/`) est un travail commun, à finir en semaine 2 (voir [demo.md](demo.md)).
 
+Membres de l'équipe : Iheb Jlassi, Yosser Khaldi, Emna Homrani, Abdel Kader Kaddachi, Salma Louhichi,
+Dhia Dine Bahi.
+**Répartition à confirmer** : remplacer chaque *à compléter* par le responsable de son module, puis
+reporter la même répartition dans [CONTRIBUTING.md](../CONTRIBUTING.md) §5 et sur la diapositive
+« L'équipe » de la soutenance. En cas de changement de module, penser à mettre à jour les trois
+endroits en même temps.
+
 Chaque responsable écrit aussi les tests de son module dans `backend/tests/<module>/`.
 
 ## Intégration progressive

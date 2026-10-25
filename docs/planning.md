@@ -29,7 +29,7 @@ Vue d'ensemble de l'avancement : [etat-du-projet.md](etat-du-projet.md).
 - [x] Squelette du frontend : routage, mise en page, client API
 
 ### Semaine 2
-- [ ] **Tous** : `demo-app/` (4 failles, 2 faux positifs, ~10 tests) et son dépôt GitHub public
+- [x] **Tous** : `demo-app/` (4 failles, 2 faux positifs, ~10 tests) et son dépôt GitHub public
 - [x] **M1** : inscription, connexion, import GitHub et ZIP, détection du framework
 - [x] **M2** : lancement de Bandit et Semgrep, normalisation
 - [x] **M5** : `BacASable` (créer, installer, détacher le réseau, exécuter, détruire), image `sandbox/`
@@ -38,22 +38,24 @@ Vue d'ensemble de l'avancement : [etat-du-projet.md](etat-du-projet.md).
 ### Semaine 3 – point d'avancement
 - [x] **M1** : vérification des tests existants avant l'analyse, liste et historique des projets
 - [x] **M2** : fusion des doublons, filtrage des 4 familles, priorisation, exclusion d'une alerte
-- [~] **M3** : prompt Attaquant, test de preuve généré et exécuté (à éprouver sur une vraie faille)
-- [ ] **M3** : few-shot CWE-89, test de preuve confirmé sur `demo-app/`
+- [x] **M3** : prompt Attaquant, test de preuve généré et exécuté
+- [x] **M3** : few-shot CWE-89 (+ les 3 autres familles, avance sur la semaine 5)
 - [x] **M5** : orchestrateur (enchaînement Attaquant → verdict)
 - [x] **M6** : page de suivi en direct
+- [ ] **Tous** : import de `demo-app/` et preuve de l'injection SQL observée en direct
 
 ### Semaine 4
-- [~] **M4** : prompt Défenseur, diff appliqué, auto-correction après un échec (à éprouver)
+- [x] **M4** : prompt Défenseur (+ les 4 exemples de correctif), diff appliqué, auto-correction après un échec
 - [x] **M5** : validation en 3 conditions, refus des diffs qui touchent `tests/`
 - [x] **M5** : limites (tentatives, appels d'outils, budget)
 - [ ] **Tous** : premier passage de bout en bout sur la faille CWE-89 et mesure du coût (D-02)
 
 ### Semaine 5
-- [ ] **M3 / M4** : few-shot CWE-78, CWE-798, CWE-22
+- [x] **M3 / M4** : few-shot CWE-78, CWE-798, CWE-22
 - [x] **M5** : reprise d'une analyse interrompue, pause sur erreur d'API
 - [x] **M6** : états des failles en direct, détail d'une faille (test, diff, résultats)
 - [x] **M1** : administration (comptes, limites, modèles)
+- [ ] **Tous** : analyse complète de `demo-app/` (4 corrigées, 2 faux positifs) et réglage des prompts
 
 ### Semaine 6
 - [x] **M6** : rapport et export PDF, patch téléchargeable, pull request GitHub, acceptation par correctif
