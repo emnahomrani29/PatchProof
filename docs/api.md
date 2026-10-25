@@ -64,7 +64,15 @@ Toutes les routes `/api/*` sauf l'inscription et la connexion demandent l'en-tê
 | PATCH | `/api/failles/{id}` | `{exclue: bool}` | `Faille` (état `selection` uniquement) |
 | POST | `/api/analyses/{id}/demarrer` | – | 202 : lance les agents sur les failles non exclues |
 | POST | `/api/analyses/{id}/reprendre` | – | 202 : reprend une analyse `en_pause` |
+| POST | `/api/analyses/{id}/relancer` | – | 202 : relance une analyse interrompue |
 | GET | `/api/analyses/{id}/etapes?faille_id=` | – | `EtapeAgent[]` (historique du suivi) |
+
+**Analyse interrompue.** Une tâche abandonnée — conteneur redémarré pendant l'analyse, coupure — laisse
+l'analyse bloquée dans son dernier état (`preparation`, `detection` ou `traitement`) : sans point de
+reprise, l'interface attend indéfiniment. `POST /api/analyses/{id}/relancer` remet en file la tâche de la
+phase en cours. La préparation repart d'une liste d'alertes propre (aucun doublon) et le traitement ignore
+les failles déjà terminées : relancer ne refait pas le travail déjà fait. Une analyse en `selection`
+attend au contraire une décision du développeur : utiliser `…/demarrer`.
 
 `Analyse` : `{id, projet_id, etat, cree_le, termine_le, jetons_utilises, cout_estime_usd, message_erreur, compteurs: {total, confirmees, faux_positifs, corrigees, revue_humaine}}`.
 

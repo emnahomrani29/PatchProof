@@ -95,3 +95,36 @@ def reprendre(analyse_id: int, s: SessionBD, utilisateur: UtilisateurCourant) ->
     s.commit()
     file().enqueue("patchproof.orchestration.analyse.traiter_analyse", analyse.id, job_timeout=3600)
     return _vers_sortie(analyse)
+
+
+# États depuis lesquels une relance a un sens, et tâche à relancer.
+TACHES_RELANCE = {
+    EtatAnalyse.en_attente: ("patchproof.orchestration.analyse.preparer_et_detecter", 1800),
+    EtatAnalyse.preparation: ("patchproof.orchestration.analyse.preparer_et_detecter", 1800),
+    EtatAnalyse.detection: ("patchproof.orchestration.analyse.preparer_et_detecter", 1800),
+    EtatAnalyse.echec: ("patchproof.orchestration.analyse.preparer_et_detecter", 1800),
+    EtatAnalyse.traitement: ("patchproof.orchestration.analyse.traiter_analyse", 3600),
+    EtatAnalyse.en_pause: ("patchproof.orchestration.analyse.traiter_analyse", 3600),
+}
+
+
+@router.post("/api/analyses/{analyse_id}/relancer", response_model=AnalyseSortie, status_code=202)
+def relancer(analyse_id: int, s: SessionBD, utilisateur: UtilisateurCourant) -> AnalyseSortie:
+    """Relance une analyse interrompue, dans la phase où elle s'est arrêtée.
+
+    Une analyse dont la tâche a été abandonnée (conteneur redémarré pendant l'analyse, coupure)
+    reste sinon bloquée dans son dernier état, et l'interface attend indéfiniment. La phase de
+    préparation repart d'une liste d'alertes propre, et le traitement ignore les failles déjà
+    terminées : relancer ne refait pas le travail déjà fait.
+    """
+    analyse = analyse_accessible(s, analyse_id, utilisateur)
+    tache = TACHES_RELANCE.get(analyse.etat)
+    if tache is None:
+        if analyse.etat == EtatAnalyse.selection:
+            raise Invalide("L'analyse attend la sélection des alertes : utilisez « Lancer les agents ».")
+        raise Invalide("Cette analyse est terminée, elle n'a pas besoin d'être relancée.")
+    fonction, delai = tache
+    analyse.message_erreur = None
+    s.commit()
+    file().enqueue(fonction, analyse.id, job_timeout=delai)
+    return _vers_sortie(analyse)

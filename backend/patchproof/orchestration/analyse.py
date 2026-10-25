@@ -26,13 +26,29 @@ def _etat(s, analyse: Analyse, etat: EtatAnalyse, message: str | None = None) ->
     publier_etat_analyse(analyse, message)
 
 
+def _reinitialiser_alertes(analyse: Analyse) -> None:
+    """Vide les alertes d'un essai précédent avant une nouvelle détection.
+
+    Sans cela, une analyse relancée après interruption enregistrerait une seconde fois les mêmes
+    alertes : le doublon serait visible dans l'interface et fausserait les compteurs.
+    (La cascade `delete-orphan` supprime aussi les tests de preuve et correctifs associés.)
+    """
+    analyse.failles.clear()
+    analyse.message_erreur = None
+
+
 def preparer_et_detecter(analyse_id: int) -> None:
-    """Phase 1 : installe le projet, vérifie les tests existants, lance les scanners (tâche RQ)."""
+    """Phase 1 : installe le projet, vérifie les tests existants, lance les scanners (tâche RQ).
+
+    Relançable : une exécution interrompue (conteneur redémarré, tâche abandonnée) peut être
+    reprise d'un bout à l'autre sans laisser de doublons.
+    """
     with session() as s:
         analyse = s.get(Analyse, analyse_id)
         projet = s.get(Projet, analyse.projet_id)
         racine = Path(projet.chemin_stockage)
         commande_test = projet.commande_test
+        _reinitialiser_alertes(analyse)
         _etat(s, analyse, EtatAnalyse.preparation)
 
     try:
