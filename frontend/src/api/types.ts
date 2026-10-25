@@ -94,6 +94,7 @@ export type NatureEtape =
   | 'verdict'
   | 'validation'
   | 'erreur'
+  | 'information'
 
 export interface Etape {
   id?: number

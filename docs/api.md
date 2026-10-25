@@ -115,5 +115,12 @@ attend au contraire une décision du développeur : utiliser `…/demarrer`.
 {"type": "etat_analyse", "etat": "en_pause", "message": "Quota OpenRouter dépassé", "compteurs": {…}}
 ```
 
-`nature` ∈ `raisonnement`, `appel_outil`, `resultat_outil`, `verdict`, `validation`, `erreur`.
+`nature` ∈ `raisonnement`, `appel_outil`, `resultat_outil`, `verdict`, `validation`, `erreur`, `information`.
 `agent` ∈ `attaquant`, `defenseur`, `orchestrateur`.
+
+Les étapes de nature `information`, publiées par l'orchestrateur, donnent la progression des phases qui
+ne produisent pas d'étape d'agent : création du bac à sable, installation des dépendances, résultat des
+tests existants, lancement puis bilan de l'analyse statique. Sans elles, l'interface n'a rien à afficher
+pendant les une à trois minutes que durent la préparation et la détection. Le client recharge par ailleurs
+l'historique (`GET /api/analyses/{id}/etapes`) à l'ouverture, et se reconnecte automatiquement au
+WebSocket, afin qu'un rechargement de page ou un redémarrage de l'API n'interrompe pas le suivi.

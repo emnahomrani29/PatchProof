@@ -9,8 +9,12 @@ import { FluxAgents } from './FluxAgents'
 import { useSuivi } from './useSuivi'
 
 const EN_COURS = new Set(['preparation', 'detection', 'traitement'])
-/** Délai sans changement d'état au-delà duquel une analyse en cours est considérée comme bloquée. */
-const DELAI_BLOCAGE_MS = 120_000
+/**
+ * Silence toléré avant de considérer une analyse bloquée. La phase la plus silencieuse est
+ * l'installation des dépendances, bornée à 300 s dans le bac à sable : au-delà de six minutes sans
+ * le moindre événement, la tâche a été abandonnée.
+ */
+const DELAI_SILENCE_MS = 360_000
 
 export default function Analyse() {
   const { id } = useParams()
@@ -40,11 +44,10 @@ export default function Analyse() {
   }, [etat])
 
   // Une analyse dont la tâche a été abandonnée (conteneur redémarré pendant l'analyse) reste
-  // bloquée dans son dernier état : on surveille la durée depuis le dernier changement pour
-  // proposer une relance plutôt que de laisser l'utilisateur devant un chargement sans fin.
-  const [depuisChangement, setDepuisChangement] = useState(Date.now())
+  // bloquée dans son dernier état. La préparation et la détection publient des étapes de
+  // progression : une longue absence d'événement signale donc un vrai problème, et l'utilisateur
+  // se voit proposer une relance plutôt qu'un chargement sans fin.
   const [maintenant, setMaintenant] = useState(Date.now())
-  useEffect(() => setDepuisChangement(Date.now()), [etat])
   useEffect(() => {
     const minuterie = setInterval(() => setMaintenant(Date.now()), 5_000)
     return () => clearInterval(minuterie)
@@ -52,7 +55,7 @@ export default function Analyse() {
   const bloque =
     etat === 'echec' ||
     etat === 'en_pause' ||
-    (EN_COURS.has(etat ?? '') && maintenant - depuisChangement > DELAI_BLOCAGE_MS)
+    (EN_COURS.has(etat ?? '') && maintenant - suivi.dernierSignal > DELAI_SILENCE_MS)
 
   const etatParFaille = useMemo(() => {
     const m: Record<number, EtatFaille> = {}
@@ -99,7 +102,7 @@ export default function Analyse() {
           <span>
             {etat === 'echec' || etat === 'en_pause'
               ? "L'analyse s'est arrêtée."
-              : "Cette étape dure anormalement longtemps (conteneur redémarré pendant l'analyse ?)."}{' '}
+              : "Aucune activité depuis plusieurs minutes : la tâche a probablement été interrompue."}{' '}
             La relancer repart d'une liste d'alertes propre, et les failles déjà traitées ne sont pas
             refaites.
           </span>

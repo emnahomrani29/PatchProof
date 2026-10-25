@@ -97,7 +97,9 @@ class ResultatValidation(BaseModel):
         )
 
 
-NatureEtape = Literal["raisonnement", "appel_outil", "resultat_outil", "verdict", "validation", "erreur"]
+NatureEtape = Literal[
+    "raisonnement", "appel_outil", "resultat_outil", "verdict", "validation", "erreur", "information",
+]
 NomAgent = Literal["attaquant", "defenseur", "orchestrateur"]
 
 

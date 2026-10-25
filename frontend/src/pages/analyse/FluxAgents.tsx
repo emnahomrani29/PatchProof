@@ -8,6 +8,7 @@ const ICONE: Record<string, string> = {
   verdict: '⚖',
   validation: '✓',
   erreur: '⚠',
+  information: 'ⓘ',
 }
 
 const COULEUR_AGENT: Record<string, string> = {
