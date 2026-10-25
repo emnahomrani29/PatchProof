@@ -132,7 +132,7 @@ def rapport():
     cle = request.args.get("nom", "ventes")
     if cle not in RAPPORTS:
         abort(400)
-    return subprocess.check_output(f"cat {RAPPORTS[cle]}", shell=True)
+    return subprocess.check_output(f"cat {os.path.join(DOSSIER_DOCS, RAPPORTS[cle])}", shell=True)
 
 
 @app.route("/whoami")
