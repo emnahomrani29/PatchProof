@@ -9,6 +9,7 @@ import io
 import logging
 import tarfile
 import time
+import tomllib
 from pathlib import Path
 
 import docker
@@ -89,14 +90,46 @@ class BacASable:
 
     # -- exécution --------------------------------------------------------------
 
+    def _dependances_pyproject(self) -> list[str]:
+        """Dépendances déclarées par `[project].dependencies` d'un `pyproject.toml`.
+
+        On installe les dépendances **sans installer le projet lui-même** : `pip install .` cherche à
+        construire le paquet, ce qui échoue sur les projets dont la découverte de paquets par
+        setuptools est ambiguë, alors que le code n'a besoin que d'être exécuté depuis la racine.
+        """
+        fichier = self.racine / "pyproject.toml"
+        try:
+            donnees = tomllib.loads(fichier.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError):
+            return []
+        projet = donnees.get("project")
+        if not isinstance(projet, dict):
+            return []
+        dependances = projet.get("dependencies", [])
+        return [d for d in dependances if isinstance(d, str)]
+
+    def _commande_installation(self) -> list[str] | None:
+        """Commande d'installation des dépendances, ou None si le projet n'en déclare aucune.
+
+        Les dépendances ne sont pas toujours dans un `requirements.txt` : un projet peut les déclarer
+        dans `pyproject.toml`, fichier que la détection du framework lit déjà. Sans cela, un tel
+        projet s'exécute dans le bac à sable sans ses dépendances et ses tests échouent alors que le
+        projet est valide.
+        """
+        base = ["pip", "install", "--no-cache-dir", "--only-binary=:all:"]
+        if (self.racine / "requirements.txt").is_file():
+            return [*base, "-r", "requirements.txt"]
+        dependances = self._dependances_pyproject()
+        if dependances:
+            return [*base, *dependances]
+        if (self.racine / "setup.py").is_file():
+            return [*base, "."]
+        return None
+
     def installer(self, commande: list[str] | None = None) -> ResultatCommande:
         """Installe les dépendances (seule étape avec réseau), puis coupe le réseau."""
         resultat = ResultatCommande(code_retour=0, sortie="aucune dépendance déclarée")
-        req = self.racine / "requirements.txt"
-        cmd = commande or (
-            ["pip", "install", "--no-cache-dir", "--only-binary=:all:", "-r", "requirements.txt"]
-            if req.is_file() else None
-        )
+        cmd = commande or self._commande_installation()
         if cmd:
             resultat = self.executer(cmd, delai=300, avec_reseau=True)
         self._couper_reseau()
