@@ -1,10 +1,9 @@
 """Routes du suivi : historique des étapes et flux WebSocket en direct (docs/api.md)."""
 
-import asyncio
 import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from redis import Redis
+from redis.asyncio import Redis as RedisAsync
 from sqlalchemy import select
 
 from patchproof.api.deps import SessionBD, UtilisateurCourant, analyse_accessible, utilisateur_par_jeton
@@ -30,6 +29,12 @@ def etapes(analyse_id: int, s: SessionBD, utilisateur: UtilisateurCourant,
 
 @router.websocket("/ws/analyses/{analyse_id}")
 async def suivi_direct(websocket: WebSocket, analyse_id: int, jeton: str = "") -> None:
+    # On accepte toujours la connexion d'abord : un refus avant accept() est renvoyé par Starlette
+    # comme un simple 403 de handshake (code de fermeture 1006 côté client), que le client ne peut
+    # pas distinguer d'une coupure réseau et qu'il réessaie en boucle. En acceptant puis en fermant
+    # avec un code applicatif (4401), le client sait que c'est une authentification refusée.
+    await websocket.accept()
+
     # Authentification via le paramètre de requête (les WebSocket ne portent pas d'en-tête Bearer).
     try:
         with session() as s:
@@ -38,24 +43,27 @@ async def suivi_direct(websocket: WebSocket, analyse_id: int, jeton: str = "") -
             etat_initial = {"type": "etat_analyse", "etat": analyse.etat.value,
                             "message": analyse.message_erreur, "compteurs": compteurs(analyse)}
     except Exception:  # noqa: BLE001  jeton invalide ou analyse inaccessible : on refuse la connexion
-        # Sans cette trace, un refus avant `accept()` n'apparaît que comme un 403 sans explication.
         journal.warning("Suivi refusé pour l'analyse %s", analyse_id, exc_info=True)
         await websocket.close(code=4401)
         return
 
-    await websocket.accept()
     await websocket.send_json(etat_initial)
 
-    pubsub = Redis.from_url(parametres().redis_url).pubsub()
-    pubsub.subscribe(canal(analyse_id))
+    # Client Redis asynchrone : `get_message` ne bloque PAS la boucle d'événements uvicorn.
+    # Avec le client synchrone, chaque attente de message figeait le serveur entier (jusqu'à 1 s par
+    # tour), ce qui ralentissait toutes les requêtes HTTP tant qu'un suivi était ouvert.
+    redis = RedisAsync.from_url(parametres().redis_url)
+    pubsub = redis.pubsub()
+    await pubsub.subscribe(canal(analyse_id))
     try:
-        while True:
-            message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
-            if message and message.get("type") == "message":
+        async for message in pubsub.listen():
+            if message.get("type") == "message":
                 donnees = message["data"]
                 await websocket.send_text(donnees.decode() if isinstance(donnees, bytes) else donnees)
-            await asyncio.sleep(0.05)  # laisse la main à la boucle asyncio
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, RuntimeError):
+        # Déconnexion du client : détectée à l'envoi suivant (RuntimeError de Starlette) ou
+        # directement (WebSocketDisconnect). Dans les deux cas, on nettoie l'abonnement Redis.
         pass
     finally:
-        pubsub.close()
+        await pubsub.aclose()
+        await redis.aclose()
