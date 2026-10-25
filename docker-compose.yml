@@ -1,0 +1,76 @@
+name: patchproof
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: patchproof
+      POSTGRES_PASSWORD: patchproof
+      POSTGRES_DB: patchproof
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U patchproof"]
+      interval: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build: ./backend
+    image: patchproof-backend:latest
+    command: uvicorn patchproof.api.app:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/patchproof
+    env_file: .env
+    volumes:
+      - ./backend/patchproof:/app/patchproof
+      - ./prompts:/app/prompts:ro
+      - donnees:/data
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    image: patchproof-backend:latest
+    command: python -m patchproof.worker
+    env_file: .env
+    volumes:
+      - ./backend/patchproof:/app/patchproof
+      - ./prompts:/app/prompts:ro
+      - donnees:/data
+      # Seul service autorisé à piloter Docker (création des bacs à sable)
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - api
+      - sandbox
+
+  frontend:
+    build: ./frontend
+    volumes:
+      - ./frontend/src:/app/src
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8000
+    depends_on:
+      - api
+
+  # Construit l'image du bac à sable puis s'arrête : les conteneurs d'analyse sont créés par le worker.
+  sandbox:
+    build: ./sandbox
+    image: patchproof-sandbox:latest
+    command: ["true"]
+    restart: "no"
+    network_mode: none
+
+volumes:
+  pgdata:
+  donnees:
