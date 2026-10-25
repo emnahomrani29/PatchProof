@@ -7,8 +7,10 @@ from patchproof.detection.priorisation import fusionner, prioriser
 
 
 def alerte(**kw):
-    base = dict(outils=["bandit"], regle="B608", fichier="app.py", ligne=42, cwe="CWE-89",
-                famille=Famille.sqli, gravite="haute", extrait="x")
+    base = {
+        "outils": ["bandit"], "regle": "B608", "fichier": "app.py", "ligne": 42, "cwe": "CWE-89",
+        "famille": Famille.sqli, "gravite": "haute", "extrait": "x",
+    }
     base.update(kw)
     return Alerte(**base)
 

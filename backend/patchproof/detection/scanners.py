@@ -6,10 +6,11 @@ Leurs sorties JSON sont lues côté worker, puis converties dans un format commu
 
 import json
 import logging
+from pathlib import Path
 
 from patchproof.core.interfaces import Bac
 from patchproof.core.schemas import Alerte
-from patchproof.detection.familles import famille_depuis_bandit, famille_depuis_cwe
+from patchproof.detection.familles import famille_bandit, famille_semgrep
 
 journal = logging.getLogger("patchproof.detection")
 
@@ -32,6 +33,26 @@ def _json_sortie(sortie: str) -> dict | None:
         return None
 
 
+def extrait_source(racine: Path, chemin: str, ligne: int, contexte: int = 2) -> str:
+    """Lignes de code autour de l'alerte, numérotées comme l'outil `lire_fichier`.
+
+    Aucun des deux scanners ne fournit d'extrait exploitable : le champ `lines` de Semgrep
+    contient l'annotation de la règle (« requires login » dans le paquet du registre) et non le
+    code. On relit donc le fichier du projet, ce qui garantit à l'agent un extrait fidèle.
+    """
+    if not chemin or ligne <= 0:
+        return ""
+    try:
+        lignes = (racine / chemin).read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return ""
+    if ligne > len(lignes):
+        return ""
+    debut = max(1, ligne - contexte)
+    fin = min(len(lignes), ligne + contexte)
+    return "\n".join(f"{n:>5} | {lignes[n - 1]}" for n in range(debut, fin + 1))[:500]
+
+
 def _bandit(bac: Bac) -> list[Alerte]:
     res = bac.executer(["bandit", "-r", ".", "-f", "json", "-q"], delai=180)
     donnees = _json_sortie(res.sortie)
@@ -41,16 +62,17 @@ def _bandit(bac: Bac) -> list[Alerte]:
     alertes = []
     for r in donnees.get("results", []):
         cwe = str((r.get("issue_cwe") or {}).get("id") or "")
-        famille = famille_depuis_cwe(cwe) or famille_depuis_bandit(r.get("test_id", ""))
+        fichier = _relatif(r.get("filename", ""))
+        ligne = r.get("line_number", 0)
         alertes.append(Alerte(
             outils=["bandit"],
             regle=r.get("test_id", "bandit"),
-            fichier=_relatif(r.get("filename", "")),
-            ligne=r.get("line_number", 0),
+            fichier=fichier,
+            ligne=ligne,
             cwe=f"CWE-{cwe}" if cwe else "",
-            famille=famille,
+            famille=famille_bandit(r.get("test_id"), cwe),
             gravite=GRAVITE_BANDIT.get(r.get("issue_severity", ""), "basse"),
-            extrait=(r.get("code") or "").strip()[:500],
+            extrait=extrait_source(bac.racine, fichier, ligne) or (r.get("code") or "").strip()[:500],
         ))
     return alertes
 
@@ -66,17 +88,19 @@ def _semgrep(bac: Bac) -> list[Alerte]:
     alertes = []
     for r in donnees.get("results", []):
         extra = r.get("extra", {})
-        meta = extra.get("metadata", {})
-        cwe = _premier_cwe(meta.get("cwe"))
+        regle = r.get("check_id", "semgrep").split(".")[-1]
+        cwe = _premier_cwe(extra.get("metadata", {}).get("cwe"))
+        fichier = _relatif(r.get("path", ""))
+        ligne = (r.get("start") or {}).get("line", 0)
         alertes.append(Alerte(
             outils=["semgrep"],
-            regle=r.get("check_id", "semgrep").split(".")[-1],
-            fichier=_relatif(r.get("path", "")),
-            ligne=(r.get("start") or {}).get("line", 0),
+            regle=regle,
+            fichier=fichier,
+            ligne=ligne,
             cwe=cwe,
-            famille=famille_depuis_cwe(cwe),
+            famille=famille_semgrep(regle, cwe),
             gravite=GRAVITE_SEMGREP.get(extra.get("severity", ""), "basse"),
-            extrait=(extra.get("lines") or "").strip()[:500],
+            extrait=extrait_source(bac.racine, fichier, ligne),
         ))
     return alertes
 
