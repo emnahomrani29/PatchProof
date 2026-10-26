@@ -1,0 +1,11 @@
+# Le projet tourne sous Windows côté développement et sous Linux dans les conteneurs :
+# on stocke en LF pour que le code soit identique partout (pas de fin de ligne CRLF).
+* text=auto eol=lf
+
+# Fichiers binaires : aucune conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.pdf binary
+*.sqlite3 binary
