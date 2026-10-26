@@ -1,0 +1,23 @@
+rules:
+  - id: custom-sql-string-format
+    message: "Formatage direct de chaîne dans une requête SQL sans paramétrage (CWE-89)."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-89"
+    patterns:
+      - pattern-either:
+          - pattern: $CURSOR.execute(f"...")
+          - pattern: $CURSOR.execute("..." % ...)
+          - pattern: $CURSOR.execute("...".format(...))
+
+  - id: custom-command-injection-shell
+    message: "Exécution de commande système avec shell=True ou entrée non assainie (CWE-78)."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-78"
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.$METHOD(..., shell=True, ...)
+          - pattern: os.system(...)

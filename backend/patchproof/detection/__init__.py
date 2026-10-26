@@ -1,5 +1,16 @@
-"""Module à implémenter — M2 Détection (Abdel Kader Kaddachi).
+"""Module M2 — Détection des alertes brutes et priorisation (E-2.1, E-2.2).
 
-À faire : voir docs/modules.md (interfaces publiques attendues), docs/agents.md et AGENTS.md.
-Le socle et l'API chargent ce module automatiquement une fois implémenté.
+Responsable : Abdel Kader Kaddachi.
 """
+
+from patchproof.detection.familles import famille_bandit, famille_semgrep
+from patchproof.detection.priorisation import fusionner, prioriser
+from patchproof.detection.scanners import lancer_scanners
+
+__all__ = [
+    "famille_bandit",
+    "famille_semgrep",
+    "fusionner",
+    "lancer_scanners",
+    "prioriser",
+]
