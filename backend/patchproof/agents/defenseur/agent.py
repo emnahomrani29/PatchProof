@@ -1,7 +1,9 @@
-"""Agent Défenseur (M4) : corrige une faille prouvée sans régression (docs/agents.md §4).
+﻿"""Agent Defenseur (M4) : corrige une faille prouvee sans regression (docs/agents.md S4).
 
-Le diff de référence n'est pas celui que l'agent déclare : il est relu dans la copie de travail
-(git diff depuis l'état de départ), donc le correctif enregistré est exactement celui qui a été testé.
+Le diff de reference n'est pas celui que l'agent declare : il est relu dans la copie de travail
+(git diff depuis l'etat de depart), donc le correctif enregistre est exactement celui qui a ete teste.
+
+Responsable : Emna Homrani (M4 - Agent Defenseur).
 """
 
 from patchproof.agents.boucle import ContexteAgent, executer_agent
@@ -15,16 +17,17 @@ def _message_tache(alerte: Alerte, test_fichier: str, test_contenu: str,
                    exemple: str, echec_precedent: str | None) -> str:
     bloc_exemple = f"\n# Exemple de correctif pour cette famille\n{exemple}\n" if exemple else ""
     bloc_echec = (
-        f"\n# Échec de ta tentative précédente (corrige-le)\n{echec_precedent}\n" if echec_precedent else ""
+        f"\n# Echec de ta tentative precedente (corrige-le)\n{echec_precedent}\n" if echec_precedent else ""
     )
     return (
-        f"# Faille confirmée à corriger\n"
+        f"# Faille confirmee a corriger\n"
         f"fichier : {alerte.fichier}\n"
         f"ligne : {alerte.ligne}\n"
         f"famille : {alerte.famille.value if alerte.famille else 'inconnue'} ({alerte.cwe})\n\n"
         f"# Test de preuve (ne pas modifier)\n{test_fichier} :\n{test_contenu}\n"
         f"{bloc_exemple}{bloc_echec}\n"
-        f"Produis un correctif minimal avec appliquer_diff, puis réponds en JSON."
+        f"Produis un correctif minimal avec l'outil `remplacer` (de preference) ou `appliquer_diff`,"
+        f" puis reponds en JSON."
     )
 
 
@@ -35,7 +38,7 @@ def proposer_correctif(
     contexte: ContexteAgent,
     echec_precedent: str | None = None,
 ) -> tuple[PropositionCorrectif, str]:
-    """Renvoie (proposition JSON, diff réellement appliqué dans la copie de travail)."""
+    """Renvoie (proposition JSON, diff reellement applique dans la copie de travail)."""
     exemple = exemple_few_shot(alerte.famille, "correctif") if alerte.famille else ""
     proposition = executer_agent(
         "defenseur",
@@ -47,5 +50,5 @@ def proposer_correctif(
         contexte,
     )
     diff_reel = diff_depuis(contexte.bac.racine, "HEAD")
-    contexte.etape("defenseur", "verdict", "Correctif proposé", resultat=proposition.explication)
+    contexte.etape("defenseur", "verdict", "Correctif propose", resultat=proposition.explication)
     return proposition, diff_reel
