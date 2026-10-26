@@ -1,15 +1,19 @@
-"""Vérifie les prompts versionnés présents dans ce lot (socle + Attaquant).
+"""Vérifie que les prompts versionnés du dossier `prompts/` sont bien ceux utilisés par les agents."""
 
-Les prompts du Défenseur et les exemples « correctif.md » sont livrés par le module M4.
-"""
-
-from patchproof.agents.prompts import DEFAUT_ATTAQUANT, exemple_few_shot, prompt_attaquant
+from patchproof.agents.prompts import (
+    DEFAUT_ATTAQUANT,
+    DEFAUT_DEFENSEUR,
+    exemple_few_shot,
+    prompt_attaquant,
+    prompt_defenseur,
+)
 from patchproof.core.modeles import Famille
 
 
-def test_le_prompt_attaquant_vient_du_depot():
-    """Un fichier manquant ferait silencieusement retomber l'Attaquant sur le prompt par défaut."""
+def test_les_prompts_systeme_viennent_du_depot():
+    """Un fichier manquant ferait silencieusement retomber les agents sur le prompt par défaut."""
     assert prompt_attaquant() != DEFAUT_ATTAQUANT
+    assert prompt_defenseur() != DEFAUT_DEFENSEUR
 
 
 def test_le_prompt_attaquant_impose_le_format_de_sortie():
@@ -18,7 +22,15 @@ def test_le_prompt_attaquant_impose_le_format_de_sortie():
     assert "tests/security/" in texte
 
 
-def test_un_exemple_attaque_par_famille_est_present():
+def test_le_prompt_defenseur_rappelle_les_interdits_et_les_conditions():
+    texte = prompt_defenseur()
+    assert "tests/" in texte          # interdiction de toucher aux tests
+    assert "alerte" in texte          # 3e condition : l'alerte doit disparaître
+    assert "diff" in texte            # format attendu : diff unifié
+
+
+def test_les_huit_exemples_few_shot_sont_presents():
     for famille in Famille:
-        contenu = exemple_few_shot(famille, "attaque")
-        assert contenu, f"exemple few-shot manquant : {famille.value}/attaque.md"
+        for role in ("attaque", "correctif"):
+            contenu = exemple_few_shot(famille, role)
+            assert contenu, f"exemple few-shot manquant : {famille.value}/{role}.md"
